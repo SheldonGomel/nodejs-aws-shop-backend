@@ -9,7 +9,7 @@ export async function getProduct(productId: string) {
     .get({
       TableName: PRODUCTS_TABLE,
       Key: {
-        ":id": productId,
+        id: productId,
       },
     })
     .promise();
@@ -22,7 +22,7 @@ export async function getProduct(productId: string) {
     .get({
       TableName: STOCKS_TABLE,
       Key: {
-        ":product_id": productId,
+        product_id: productId,
       },
     })
     .promise();

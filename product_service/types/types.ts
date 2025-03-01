@@ -1,11 +1,18 @@
 export type Product = {
-  id: number;
+  id: string;
   title: string;
   price: number;
-  description: number;
+  description: string;
+}
+
+export type CreateProduct = {
+  title: string;
+  price: number;
+  description: string;
+  count: number;
 }
 
 export type Stock = {
-  product_id: number;
+  product_id: string;
   count: number;
 }

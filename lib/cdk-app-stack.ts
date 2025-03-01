@@ -52,12 +52,21 @@ export class MyLambdaProjectStack extends Stack {
       ...options,
     });
 
+    // Create Lambda function for creating a new product
+    const createProduct = new NodejsFunction(this, "CreateProduct", {
+      entry: "product_service/lambda/createProduct.ts",
+      functionName: "create-product",
+      ...options,
+    });
+
     // Then grant permissions to your Lambda functions
     productsTable.grantReadWriteData(getProductsList);
     productsTable.grantReadWriteData(getProductsById);
+    productsTable.grantReadWriteData(createProduct);
 
     stocksTable.grantReadWriteData(getProductsList);
     stocksTable.grantReadWriteData(getProductsById);
+    stocksTable.grantReadWriteData(createProduct);
 
     // Create API Gateway
     const api = new RestApi(this, "ProductsApi", {
@@ -81,6 +90,9 @@ export class MyLambdaProjectStack extends Stack {
     // GET /products/{id}
     const productById = productsResource.addResource("{id}");
     productById.addMethod("GET", new LambdaIntegration(getProductsById));
+
+    // POST /products
+    productsResource.addMethod("POST", new LambdaIntegration(createProduct));
 
     // Output the API URL
     new CfnOutput(this, "ApiUrl", {
