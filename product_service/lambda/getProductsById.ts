@@ -1,5 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { products } from './mockProducts';
+import { getProduct } from '../services/getProduct';
+
+const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Credentials': true,
+};
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log('GetProductsById lambda invoked with event:', event);
@@ -9,33 +15,31 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!productId) {
         return {
             statusCode: 400,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': true,
-            },
+            headers,
             body: JSON.stringify({ message: 'Product ID is required' })
         };
     }
 
-    const product = products.find(p => p.id === productId);
-
-    if (!product) {
+    try {
+        const product = await getProduct(productId);
+        if (!product) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ message: 'Product not found' })
+            };
+        }
         return {
-            statusCode: 404,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': true,
-            },
-            body: JSON.stringify({ message: 'Product not found' })
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(product)
+        };
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ message: 'Internal Server Error' })
         };
     }
-
-    return {
-        statusCode: 200,
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Credentials': true,
-        },
-        body: JSON.stringify(product)
-    };
 };
