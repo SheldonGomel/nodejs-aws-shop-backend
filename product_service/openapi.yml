@@ -1,0 +1,83 @@
+openapi: "3.0.0"
+info:
+  version: "1.0.0"
+  title: Products Service API
+  description: "API for managing products"
+  contact:
+    name: "Discord"
+    url: https://discord.com/users/1015976633808724099
+servers:
+  - description: AWS API Gateway
+    url: https://3jg172mm8h.execute-api.eu-west-1.amazonaws.com/dev
+
+paths:
+  /products:
+    get:
+      summary: "Get all products list"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/products"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Products not found"
+  /products/{productId}:
+    get:
+      summary: "Get a product by Id"
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/product"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product not found"
+components:
+  schemas:
+    product:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          example: "1"
+        title:
+          type: string
+          example: "Product 1"
+        description:
+          type: string
+          example: "Product 1 description"
+        price:
+          type: number
+          example: 100
+    products:
+      type: array
+      description: >
+        List of products.
+      items:
+        $ref: "#/components/schemas/product"
