@@ -10,7 +10,8 @@
     "test": "jest",
     "cdk": "cdk",
     "deploy": "npm run build && cdk deploy",
-    "destroy": "cdk destroy"
+    "destroy": "cdk destroy",
+    "seed": "ts-node product_service/scripts/seed.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.147",
@@ -25,6 +26,9 @@
   },
   "dependencies": {
     "aws-cdk-lib": "^2.179.0",
-    "constructs": "^10.0.0"
+    "aws-sdk": "^2.1692.0",
+    "constructs": "^10.0.0",
+    "dotenv": "^16.4.7",
+    "uuid": "^11.1.0"
   }
 }
