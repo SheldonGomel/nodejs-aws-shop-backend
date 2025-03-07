@@ -8,7 +8,7 @@ info:
     url: https://discord.com/users/1015976633808724099
 servers:
   - description: AWS API Gateway
-    url: https://3jg172mm8h.execute-api.eu-west-1.amazonaws.com/dev
+    url: https://p995oywed8.execute-api.eu-west-1.amazonaws.com/dev
 
 paths:
   /products:
@@ -31,6 +31,31 @@ paths:
                   message:
                     type: string
                     example: "Products not found"
+    post:
+      summary: "Create a new product"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/product"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/product"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Missing body"
   /products/{productId}:
     get:
       summary: "Get a product by Id"
@@ -68,13 +93,16 @@ components:
           example: "1"
         title:
           type: string
-          example: "Product 1"
+          example: "Alpaca 1"
         description:
           type: string
-          example: "Product 1 description"
+          example: "Alpaca 1 color"
         price:
           type: number
           example: 100
+        count:
+          type: integer
+          example: 10
     products:
       type: array
       description: >
