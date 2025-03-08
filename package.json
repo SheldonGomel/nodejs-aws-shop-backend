@@ -9,7 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "npm run build && cdk deploy",
+    "deploy": "npm run build && cdk deploy --all",
     "destroy": "cdk destroy",
     "seed": "ts-node product_service/scripts/seed.ts"
   },
