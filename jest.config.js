@@ -1,8 +1,7 @@
 module.exports = {
+  preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/test','<rootDir>/product_service'],
+  roots: ['<rootDir>/product_service'],
   testMatch: ['**/*.test.ts'],
-  transform: {
-    '^.+\\.tsx?$': 'ts-jest'
-  }
+  testPathIgnorePatterns: ['/node_modules/', '/cdk.out/'],
 };

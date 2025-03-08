@@ -137,14 +137,14 @@ export class ImportServiceStack extends Stack {
     // Create Lambda function for importing products file
     const importProductsFile = new NodejsFunction(this, 'ImportProductsFile', {
       functionName: 'import-products-file',
-      entry: 'import-service/lambda/importProductsFile.ts',
+      entry: 'import_service/lambda/importProductsFile.ts',
       ...importOptions,
     });
 
     // Create Lambda function for parsing imported products file
     const importFileParser = new NodejsFunction(this, 'ImportFileParser', {
       functionName: 'import-file-parser',
-      entry: 'import-service/lambda/importFileParser.ts',
+      entry: 'import_service/lambda/importFileParser.ts',
       ...importOptions,
     });
 
