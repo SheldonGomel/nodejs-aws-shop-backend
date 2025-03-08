@@ -5,6 +5,7 @@ import { RestApi, LambdaIntegration, Cors } from "aws-cdk-lib/aws-apigateway";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
 const bundling = {
@@ -140,9 +141,25 @@ export class ImportServiceStack extends Stack {
       ...importOptions,
     });
 
+    // Create Lambda function for parsing imported products file
+    const importFileParser = new NodejsFunction(this, 'ImportFileParser', {
+      functionName: 'import-file-parser',
+      entry: 'import-service/lambda/importFileParser.ts',
+      ...importOptions,
+    });
+
+    // Add S3 event notification for the importFileParser Lambda
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(importFileParser),
+      // Only trigger for objects in the 'uploaded/' prefix
+      { prefix: 'uploaded/' }
+    );
+
     // Grant S3 permissions to Lambda
     bucket.grantPut(importProductsFile);
     bucket.grantRead(importProductsFile);
+    bucket.grantRead(importFileParser);
 
     // Create API Gateway
     const api = new RestApi(this, 'ImportApi', {
@@ -155,6 +172,7 @@ export class ImportServiceStack extends Stack {
 
     // Create API resource and method
     const importResource = api.root.addResource('import');
+
 
     importResource.addMethod('GET', new LambdaIntegration(importProductsFile), {
       requestParameters: {
