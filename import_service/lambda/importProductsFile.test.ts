@@ -2,6 +2,9 @@ import { APIGatewayProxyEvent } from "aws-lambda";
 import { handler } from "./importProductsFile";
 import { getSignedUrl } from "../services/getSignedUrl";
 
+jest.spyOn(console, "log").mockImplementation(() => {}); // Suppress console.log
+jest.spyOn(console, "error").mockImplementation(() => {}); // Suppress console.error
+
 // Mock the getSignedUrl service
 jest.mock("../services/getSignedUrl");
 const mockedGetSignedUrl = getSignedUrl as jest.MockedFunction<typeof getSignedUrl>;

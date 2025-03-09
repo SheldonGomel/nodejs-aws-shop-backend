@@ -1,99 +1,109 @@
-import { S3Event } from 'aws-lambda';
-import { S3 } from 'aws-sdk';
-import { Transform } from 'stream';
-import { handler } from './importFileParser';
+import { S3Event } from "aws-lambda";
+import { S3 } from "aws-sdk";
+import { Readable, Transform } from "stream";
+import { handler } from "./importFileParser";
 
-// Mock the entire aws-sdk
-jest.mock('aws-sdk', () => {
+jest.spyOn(console, "log").mockImplementation(() => {}); // Suppress console.log
+jest.spyOn(console, "error").mockImplementation(() => {}); // Suppress console.error
+
+// create Stream from string
+const stream = new Readable();
+
+stream.push("title,description\n");
+stream.push(`Product1,Description1\n`);
+stream.push(`Product2,Description2\n`);
+stream.push(null); // end of stream
+
+// const createReadStreamMock = jest.fn(); //.mockImplementation(() => stream);
+
+const getObjectMock = jest.fn().mockImplementation(() => ({
+  createReadStream: () => stream,
+}));
+
+const copyObjectMock = jest.fn().mockImplementation(() => ({
+  promise: () => Promise.resolve(true),
+}));
+const deleteObjectMock = jest.fn().mockImplementation(() => ({
+  promise: () => Promise.resolve(true),
+}));
+
+jest.mock("aws-sdk", () => {
   return {
     S3: jest.fn().mockImplementation(() => ({
-      getObject: jest.fn().mockImplementation(() => ({
-        createReadStream: jest.fn()
-      }))
-    }))
+      getObject: (params: S3.Types.GetObjectRequest) => getObjectMock(params),
+      copyObject: (params: S3.Types.CopyObjectRequest) =>
+        copyObjectMock(params),
+      deleteObject: (params: S3.Types.DeleteObjectRequest) =>
+        deleteObjectMock(params),
+    })),
   };
 });
 
-describe('importFileParser Lambda', () => {
-  let s3Instance: S3;
-  
+describe("importFileParser Lambda", () => {
+  // let s3Instance: S3;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    s3Instance = new S3();
   });
-
-  // Helper function to create a mock CSV stream
-  const createMockCsvStream = (data: any[]) => {
-    const mockStream = new Transform({
-      transform(chunk, encoding, callback) {
-        callback(null, chunk);
-      }
-    });
-
-    // Add a small delay before pushing data to simulate real streaming
-    process.nextTick(() => {
-      // Push CSV header
-      mockStream.push('title,description\n');
-      
-      // Push each data row
-      data.forEach(item => {
-        mockStream.push(`${item.title},${item.description}\n`);
-      });
-      
-      mockStream.push(null); // End the stream
-    });
-
-    // Add pipe method if it doesn't exist
-    if (!mockStream.pipe) {
-      mockStream.pipe = jest.fn().mockReturnValue(mockStream);
-    }
-
-    return mockStream;
-  };
 
   const mockEvent: S3Event = {
     Records: [
       {
         s3: {
           bucket: {
-            name: 'test-bucket'
+            name: "test-bucket",
           },
           object: {
-            key: 'test-file.csv'
-          }
-        }
-      }
-    ]
+            key: "uploaded/test-file.csv",
+          },
+        },
+      },
+    ],
   } as any;
 
-  test('should process CSV file successfully', async () => {
-    const mockData = [
-      { title: 'Product1', description: 'Description1' },
-      { title: 'Product2', description: 'Description2' }
-    ];
-
-    const mockStream = createMockCsvStream(mockData);
-    (s3Instance.getObject as jest.Mock).mockReturnValue({
-      createReadStream: () => mockStream,
-      pipe: jest.fn().mockReturnValue(mockStream)
-    });
-
-    const consoleSpy = jest.spyOn(console, 'log');
+  test("should process CSV file successfully", async () => {
 
     await handler(mockEvent, {} as any, () => {});
 
-    expect(s3Instance.getObject).toHaveBeenCalledWith({
-      Bucket: 'XXXXXXXXXXX',
-      Key: 'test-file.csv'
+    const bucketName = mockEvent.Records[0].s3.bucket.name;
+    const objectKey = mockEvent.Records[0].s3.object.key;
+
+    expect(getObjectMock).toHaveBeenCalledTimes(1);
+    expect(getObjectMock).toHaveBeenCalledWith({
+      Bucket: bucketName,
+      Key: objectKey,
+    });
+    expect(copyObjectMock).toHaveBeenCalledTimes(1);
+    expect(copyObjectMock).toHaveBeenCalledWith({
+      Bucket: bucketName,
+      CopySource: `${bucketName}/${objectKey}`,
+      Key: objectKey.replace("uploaded", "parsed"),
+    });
+    expect(deleteObjectMock).toHaveBeenCalledTimes(1);
+    expect(deleteObjectMock).toHaveBeenCalledWith({
+      Bucket: bucketName,
+      Key: objectKey,
     });
 
-    // Verify each record was logged
-    mockData.forEach(item => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Parsed record:',
-        JSON.stringify(item)
-      );
-    });
   });
 
+  test("should handle S3 getObject error", async () => {
+    getObjectMock.mockImplementationOnce(() => {
+      throw new Error("S3 getObject failed");
+    });
+
+
+    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow("S3 getObject failed");
+
+    expect(getObjectMock).toHaveBeenCalledTimes(1);
+    expect(copyObjectMock).not.toHaveBeenCalled();
+    expect(deleteObjectMock).not.toHaveBeenCalled();
+
+  });
+
+  test("should throw error when no records in event", async () => {
+    const mockEvent = { Records: [] } as any;
+
+    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow("No records found in the event");
+  });
 });
