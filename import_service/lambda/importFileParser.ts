@@ -47,8 +47,28 @@ export const handler: Handler<S3Event> = async (event) => {
             console.log("Finished processing CSV file");
             resolve(null);
           });
+
         console.log("CSV processing completed successfully");
       });
+
+      const newKey = key.replace("uploaded/", "parsed/");
+
+      await s3
+        .copyObject({
+          Bucket: bucket,
+          CopySource: `${bucket}/${key}`,
+          Key: newKey,
+        })
+        .promise();
+
+      await s3
+        .deleteObject({
+          Bucket: bucket,
+          Key: key,
+        })
+        .promise();
+
+      console.log(`Successfully moved file from ${key} to ${newKey}`);
     } catch (error) {
       console.error("Error processing file:", error);
       throw error;

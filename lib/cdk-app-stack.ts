@@ -127,6 +127,9 @@ export class ImportServiceStack extends Stack {
           allowedMethods: [
             s3.HttpMethods.GET,
             s3.HttpMethods.PUT,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.DELETE,
+            s3.HttpMethods.HEAD,
           ],
           allowedOrigins: ['*'],
           allowedHeaders: ['*'],
@@ -159,7 +162,8 @@ export class ImportServiceStack extends Stack {
     // Grant S3 permissions to Lambda
     bucket.grantPut(importProductsFile);
     bucket.grantRead(importProductsFile);
-    bucket.grantRead(importFileParser);
+    bucket.grantReadWrite(importFileParser);
+    bucket.grantDelete(importFileParser);
 
     // Create API Gateway
     const api = new RestApi(this, 'ImportApi', {
@@ -186,7 +190,7 @@ export class ImportServiceStack extends Stack {
     // Add additional IAM policy for S3 presigned URL generation
     importProductsFile.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['s3:PutObject'],
+        actions: ['s3:PutObject',],
         resources: [`${bucket.bucketArn}/*`],
       })
     );
