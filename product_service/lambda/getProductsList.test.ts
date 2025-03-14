@@ -1,6 +1,9 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from './getProductsList';
+import { getProducts } from '../services/getProducts';
 import { products } from './mockProducts';
+
+jest.mock('../services/getProducts');
 
 describe('getProductsList lambda', () => {
     let mockEvent: APIGatewayProxyEvent;
@@ -24,6 +27,9 @@ describe('getProductsList lambda', () => {
 
         // Spy on console.log
         jest.spyOn(console, 'log').mockImplementation(() => {});
+
+        // Mock getProducts function
+        (getProducts as jest.Mock).mockResolvedValue(products);
     });
 
     afterEach(() => {
@@ -41,6 +47,7 @@ describe('getProductsList lambda', () => {
         expect(response.headers).toEqual({
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': true,
+            "Content-Type": "application/json",
         });
     });
 

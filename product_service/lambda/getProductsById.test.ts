@@ -1,6 +1,9 @@
 import { APIGatewayProxyEvent } from "aws-lambda";
 import { handler } from "./getProductsById";
+import { getProduct } from "../services/getProduct";
 import { products } from "./mockProducts";
+
+jest.mock("../services/getProduct");
 
 describe("getProductsById Lambda", () => {
   let mockEvent: Partial<APIGatewayProxyEvent>;
@@ -30,6 +33,8 @@ describe("getProductsById Lambda", () => {
       id: "non-existent-id",
     };
 
+    (getProduct as jest.Mock).mockResolvedValue(null);
+
     const result = await handler(mockEvent as APIGatewayProxyEvent);
 
     expect(result.statusCode).toBe(404);
@@ -45,6 +50,8 @@ describe("getProductsById Lambda", () => {
       id: testProduct.id,
     };
 
+    (getProduct as jest.Mock).mockResolvedValue(testProduct);
+
     const result = await handler(mockEvent as APIGatewayProxyEvent);
 
     expect(result.statusCode).toBe(200);
@@ -56,11 +63,14 @@ describe("getProductsById Lambda", () => {
       id: products[0].id,
     };
 
+    (getProduct as jest.Mock).mockResolvedValue(products[0]);
+
     const result = await handler(mockEvent as APIGatewayProxyEvent);
 
     expect(result.headers).toEqual({
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Credentials": true,
+      "Content-Type": "application/json",
     });
   });
 
@@ -69,6 +79,8 @@ describe("getProductsById Lambda", () => {
     mockEvent.pathParameters = {
       id: products[0].id,
     };
+
+    (getProduct as jest.Mock).mockResolvedValue(products[0]);
 
     await handler(mockEvent as APIGatewayProxyEvent);
 
