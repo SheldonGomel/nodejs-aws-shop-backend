@@ -3,6 +3,9 @@ import { handler } from "./getProductsById";
 import { getProduct } from "../services/getProduct";
 import { products } from "./mockProducts";
 
+jest.spyOn(console, "log").mockImplementation(() => {}); // Suppress console.log
+jest.spyOn(console, "error").mockImplementation(() => {}); // Suppress console.error
+
 jest.mock("../services/getProduct");
 
 describe("getProductsById Lambda", () => {

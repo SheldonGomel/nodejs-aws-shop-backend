@@ -5,6 +5,7 @@ import { handler } from "./importFileParser";
 
 jest.spyOn(console, "log").mockImplementation(() => {}); // Suppress console.log
 jest.spyOn(console, "error").mockImplementation(() => {}); // Suppress console.error
+jest.spyOn(console, "info").mockImplementation(() => {}); // Suppress console.error
 
 // create Stream from string
 const stream = new Readable();
@@ -26,6 +27,7 @@ const copyObjectMock = jest.fn().mockImplementation(() => ({
 const deleteObjectMock = jest.fn().mockImplementation(() => ({
   promise: () => Promise.resolve(true),
 }));
+const sendMessageMock = jest.fn();
 
 jest.mock("aws-sdk", () => {
   return {
@@ -36,6 +38,10 @@ jest.mock("aws-sdk", () => {
       deleteObject: (params: S3.Types.DeleteObjectRequest) =>
         deleteObjectMock(params),
     })),
+    SQS: jest.fn().mockImplementation(() => ({
+      sendMessage: () =>
+        sendMessageMock(),
+    })),
   };
 });
 
@@ -44,6 +50,7 @@ describe("importFileParser Lambda", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.SQS_URL = "sqs.url";
   });
 
   const mockEvent: S3Event = {
@@ -62,7 +69,6 @@ describe("importFileParser Lambda", () => {
   } as any;
 
   test("should process CSV file successfully", async () => {
-
     await handler(mockEvent, {} as any, () => {});
 
     const bucketName = mockEvent.Records[0].s3.bucket.name;
@@ -84,7 +90,6 @@ describe("importFileParser Lambda", () => {
       Bucket: bucketName,
       Key: objectKey,
     });
-
   });
 
   test("should handle S3 getObject error", async () => {
@@ -92,18 +97,20 @@ describe("importFileParser Lambda", () => {
       throw new Error("S3 getObject failed");
     });
 
-
-    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow("S3 getObject failed");
+    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow(
+      "S3 getObject failed"
+    );
 
     expect(getObjectMock).toHaveBeenCalledTimes(1);
     expect(copyObjectMock).not.toHaveBeenCalled();
     expect(deleteObjectMock).not.toHaveBeenCalled();
-
   });
 
   test("should throw error when no records in event", async () => {
     const mockEvent = { Records: [] } as any;
 
-    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow("No records found in the event");
+    await expect(handler(mockEvent, {} as any, () => {})).rejects.toThrow(
+      "No records found in the event"
+    );
   });
 });

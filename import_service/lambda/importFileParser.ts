@@ -7,9 +7,6 @@ const sqs = new SQS();
 const sqsUrl = process.env.SQS_URL
 
 export const handler: Handler<S3Event> = async (event) => {
-  if (!sqsUrl) {
-    throw new Error("SQS_URL environment variable is not set");
-  }
   try {
     console.log(
       "ImportFileParser Lambda function has been invoked with event:",
