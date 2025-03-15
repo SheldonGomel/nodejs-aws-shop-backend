@@ -102,7 +102,6 @@ export class MyLambdaProjectStack extends Stack {
     // Create SQS queue for catalog items
     const catalogItemsQueue = new sqs.Queue(this, "CatalogItemsQueue", {
       queueName: "catalogItemsQueue",
-      fifo: true,
       visibilityTimeout: Duration.seconds(30),
       retentionPeriod: Duration.days(14),
     });
@@ -148,6 +147,12 @@ export class MyLambdaProjectStack extends Stack {
       value: api.url,
       description: "API Gateway URL",
     });
+
+    // Output the SQS arn
+    new CfnOutput(this, "SQSArn", {
+      value: catalogItemsQueue.queueArn,
+      description: "SQS Queue ARN",
+    });
   }
 }
 
@@ -180,13 +185,23 @@ export class ImportServiceStack extends Stack {
       entry: "import_service/lambda/importProductsFile.ts",
       ...importOptions,
     });
+    bucket.grantPut(importProductsFile);
+    bucket.grantRead(importProductsFile);
+
+    const queue = sqs.Queue.fromQueueArn(this, "ImportQueue", "arn:aws:sqs:eu-west-1:891377365177:catalogItemsQueue");
 
     // Create Lambda function for parsing imported products file
     const importFileParser = new NodejsFunction(this, "ImportFileParser", {
       functionName: "import-file-parser",
       entry: "import_service/lambda/importFileParser.ts",
-      ...importOptions,
+      ...lambdaParams,
+      environment: {
+        SQS_URL: queue.queueUrl,
+      },
     });
+    bucket.grantReadWrite(importFileParser);
+    bucket.grantDelete(importFileParser);
+    queue.grantSendMessages(importFileParser);
 
     // Add S3 event notification for the importFileParser Lambda
     bucket.addEventNotification(
@@ -196,11 +211,6 @@ export class ImportServiceStack extends Stack {
       { prefix: "uploaded/" }
     );
 
-    // Grant S3 permissions to Lambda
-    bucket.grantPut(importProductsFile);
-    bucket.grantRead(importProductsFile);
-    bucket.grantReadWrite(importFileParser);
-    bucket.grantDelete(importFileParser);
 
     // Create API Gateway
     const api = new RestApi(this, "ImportApi", {
