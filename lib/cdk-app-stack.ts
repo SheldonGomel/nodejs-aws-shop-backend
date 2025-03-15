@@ -14,7 +14,11 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as sns from "aws-cdk-lib/aws-sns";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import dotenv from "dotenv";
+
+dotenv.config()
 
 const bundling = {
   forceDockerBundling: false, // Disable Docker bundling
@@ -106,7 +110,6 @@ export class MyLambdaProjectStack extends Stack {
       retentionPeriod: Duration.days(14),
     });
 
-    // Grant SQS permissions to the Lambda function
     catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
 
     // Add SQS as event source for catalogBatchProcess Lambda
@@ -115,6 +118,24 @@ export class MyLambdaProjectStack extends Stack {
         batchSize: 5,
       })
     );
+
+    // Create SNS topic for product creation
+    const createProductTopic = new sns.Topic(this, "CreateProductTopic", {
+      topicName: "create-product-topic",
+    });
+
+    // Add email subscription to the topic
+    new sns.Subscription(this, "CreateProductEmailSubscription", {
+      topic: createProductTopic,
+      protocol: sns.SubscriptionProtocol.EMAIL,
+      endpoint: process.env.SNS_EMAIL!,
+    });
+
+    // Grant publish permissions to catalogBatchProcess Lambda
+    createProductTopic.grantPublish(catalogBatchProcess);
+
+    // Add SNS topic ARN to Lambda environment variables
+    catalogBatchProcess.addEnvironment("IMPORT_PRODUCTS_SNS_ARN", createProductTopic.topicArn);
 
     // Create API Gateway
     const api = new RestApi(this, "ProductsApi", {
@@ -188,7 +209,11 @@ export class ImportServiceStack extends Stack {
     bucket.grantPut(importProductsFile);
     bucket.grantRead(importProductsFile);
 
-    const queue = sqs.Queue.fromQueueArn(this, "ImportQueue", "arn:aws:sqs:eu-west-1:891377365177:catalogItemsQueue");
+    const queue = sqs.Queue.fromQueueArn(
+      this,
+      "ImportQueue",
+      "arn:aws:sqs:eu-west-1:891377365177:catalogItemsQueue"
+    );
 
     // Create Lambda function for parsing imported products file
     const importFileParser = new NodejsFunction(this, "ImportFileParser", {
@@ -210,7 +235,6 @@ export class ImportServiceStack extends Stack {
       // Only trigger for objects in the 'uploaded/' prefix
       { prefix: "uploaded/" }
     );
-
 
     // Create API Gateway
     const api = new RestApi(this, "ImportApi", {
