@@ -47,14 +47,3 @@ export const createProduct = async (product: CreateProduct) => {
     throw new Error(`Failed to create product: ${(error as AWSError).message}`);
   }
 }
-
-createProduct({
-  title: "Alpaca Black and White",
-  description: "Test product",
-  price: 61,
-  count: 2
-}).then((product) => {
-  console.log('Product created:', product);
-}).catch((error) => {
-  console.error('Failed to create product:', error);
-});

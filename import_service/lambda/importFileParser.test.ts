@@ -1,6 +1,6 @@
 import { S3Event } from "aws-lambda";
 import { S3 } from "aws-sdk";
-import { Readable, Transform } from "stream";
+import { Readable } from "stream";
 import { handler } from "./importFileParser";
 
 jest.spyOn(console, "log").mockImplementation(() => {}); // Suppress console.log

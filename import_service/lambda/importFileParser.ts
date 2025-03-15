@@ -1,10 +1,15 @@
 import { S3Event, Handler } from "aws-lambda";
-import { S3 } from "aws-sdk";
+import { S3, SQS } from "aws-sdk";
 import csv from "csv-parser";
 
 const s3 = new S3();
+const sqs = new SQS();
+const sqsUrl = process.env.SQS_URL
 
 export const handler: Handler<S3Event> = async (event) => {
+  if (!sqsUrl) {
+    throw new Error("SQS_URL environment variable is not set");
+  }
   try {
     console.log(
       "ImportFileParser Lambda function has been invoked with event:",
@@ -38,6 +43,20 @@ export const handler: Handler<S3Event> = async (event) => {
           .on("data", (data) => {
             // Log each record from CSV
             console.log("Parsed record:", JSON.stringify(data));
+            // Send each record to SQS
+            sqs.sendMessage(
+              {
+                QueueUrl: sqsUrl,
+                MessageBody: JSON.stringify(data),
+              },
+              (error, data) => {
+                if (error) {
+                  console.error("Error sending message to SQS:", error);
+                } else {
+                  console.log("Message sent to SQS:", data.MessageId);
+                }
+              }
+            );
           })
           .on("error", (error) => {
             console.error("Error parsing CSV:", error);
