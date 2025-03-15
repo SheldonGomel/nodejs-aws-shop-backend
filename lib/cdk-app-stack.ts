@@ -18,7 +18,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
 const bundling = {
   forceDockerBundling: false, // Disable Docker bundling
@@ -124,18 +124,38 @@ export class MyLambdaProjectStack extends Stack {
       topicName: "create-product-topic",
     });
 
-    // Add email subscription to the topic
-    new sns.Subscription(this, "CreateProductEmailSubscription", {
+    // Add email subscription for high price products (>50)
+    new sns.Subscription(this, "HighPriceProductEmailSubscription", {
       topic: createProductTopic,
       protocol: sns.SubscriptionProtocol.EMAIL,
-      endpoint: process.env.SNS_EMAIL!,
+      endpoint: process.env.SNS_EMAIL_HIGH_PRICE!,
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({
+          greaterThan: 50,
+        }),
+      },
+    });
+
+    // Add email subscription for low price products (<=50)
+    new sns.Subscription(this, "LowPriceProductEmailSubscription", {
+      topic: createProductTopic,
+      protocol: sns.SubscriptionProtocol.EMAIL,
+      endpoint: process.env.SNS_EMAIL_LOW_PRICE!,
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({
+          lessThanOrEqualTo: 50,
+        }),
+      },
     });
 
     // Grant publish permissions to catalogBatchProcess Lambda
     createProductTopic.grantPublish(catalogBatchProcess);
 
     // Add SNS topic ARN to Lambda environment variables
-    catalogBatchProcess.addEnvironment("IMPORT_PRODUCTS_SNS_ARN", createProductTopic.topicArn);
+    catalogBatchProcess.addEnvironment(
+      "IMPORT_PRODUCTS_SNS_ARN",
+      createProductTopic.topicArn
+    );
 
     // Create API Gateway
     const api = new RestApi(this, "ProductsApi", {

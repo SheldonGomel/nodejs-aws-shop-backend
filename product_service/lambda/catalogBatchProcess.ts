@@ -30,26 +30,26 @@ export const handler = async (event: SQSEvent): Promise<void> => {
       const newProduct = await createProduct(product);
       products.push(newProduct);
       console.log("Successfully created product:", newProduct.id);
+      // Send notification to SNS topic
+      const snsTopicArn = process.env.IMPORT_PRODUCTS_SNS_ARN;
+
+      if (!snsTopicArn) {
+        console.error("SNS topic ARN not found in environment variables");
+        continue;
+      }
+      const snsParams = {
+        Subject: "Product created",
+        Message: `Product with ids: ${newProduct.id} successfuly created!`,
+        TopicArn: snsTopicArn,
+        MessageAttributes: {
+          price: {
+            DataType: "Number",
+            StringValue: newProduct.price.toString(),
+          },
+        },
+      };
+      await snsClient.publish(snsParams).promise();
     }
-    if (products.length === 0) {
-      console.log("No products created");
-      return;
-    }
-    // Send notification to SNS topic
-    const snsTopicArn = process.env.IMPORT_PRODUCTS_SNS_ARN;
-    if (!snsTopicArn) {
-      console.error("SNS topic ARN not found in environment variables");
-    }
-    const snsParams = {
-      Subject: "Product created",
-      Message: `Products with ids: ${products
-        .map((p) => p.id)
-        .join(", ")} created successfully\n Total products records was ${
-        records.length
-      }`,
-      TopicArn: snsTopicArn,
-    };
-    await snsClient.publish(snsParams).promise();
   } catch (error) {
     console.error("Error processing batch:", error);
     throw error;

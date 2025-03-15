@@ -41,12 +41,16 @@ describe("catalogBatchProcess lambda", () => {
   });
 
   test("should process SQS messages successfully", async () => {
-    const mockProduct = { title: "Product1", description: "Description1" };
+    const mockProduct = {
+      title: "Product1",
+      description: "Description1",
+      price: 30,
+    };
     const mockNewProduct = { id: "1", ...mockProduct };
 
     (validateProduct as jest.Mock).mockReturnValue({ isError: false });
     (createProduct as jest.Mock).mockResolvedValue(mockNewProduct);
- 
+
     const event: SQSEvent = {
       Records: [createSQSRecord(mockProduct)],
     };
@@ -57,8 +61,14 @@ describe("catalogBatchProcess lambda", () => {
     expect(createProduct).toHaveBeenCalledWith(mockProduct);
     expect(publishMock).toHaveBeenCalledWith({
       Subject: "Product created",
-      Message: `Products with ids: 1 created successfully\n Total products records was 1`,
+      Message: "Product with ids: 1 successfuly created!",
       TopicArn: process.env.IMPORT_PRODUCTS_SNS_ARN,
+      MessageAttributes: {
+        price: {
+          DataType: "Number",
+          StringValue: "30",
+        },
+      },
     });
   });
 
