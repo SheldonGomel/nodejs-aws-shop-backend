@@ -38,8 +38,6 @@ export const handler: Handler<S3Event> = async (event) => {
         s3Stream
           .pipe(csv())
           .on("data", (data) => {
-            // Log each record from CSV
-            console.log("Parsed record:", JSON.stringify(data));
             // Send each record to SQS
             sqs.sendMessage(
               {
