@@ -286,3 +286,27 @@ export class ImportServiceStack extends Stack {
     );
   }
 }
+
+export class AuthServiceStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    // Create Lambda function for authorizer
+    const authorizerLambda = new NodejsFunction(this, "AuthorizerLambda", {
+      entry: "authorization_service/lambda/basicAutorizer.ts",
+      functionName: "authorizer-lambda",
+      ...lambdaParams,
+      environment: {
+        SheldonGomel: process.env.SheldonGomel!,
+      },
+    });
+
+    // Add permissions to the Lambda function
+    authorizerLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        resources: ["*"],
+      })
+    );
+  }
+}
