@@ -13,6 +13,7 @@ import {
   Cors,
   AuthorizationType,
   TokenAuthorizer,
+  ResponseType,
 } from "aws-cdk-lib/aws-apigateway";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
@@ -267,7 +268,7 @@ export class ImportServiceStack extends Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
         allowMethods: Cors.ALL_METHODS,
-        allowHeaders: ["Content-Type"],
+        allowHeaders: ["Content-Type", "Authorization"],
       },
     });
 
@@ -294,6 +295,35 @@ export class ImportServiceStack extends Stack {
       },
       authorizer: authorizer,
       authorizationType: AuthorizationType.CUSTOM,
+    });
+
+    // Add gateway responses for unauthorized and forbidden
+    api.addGatewayResponse("Unauthorized", {
+      type: ResponseType.UNAUTHORIZED,
+      statusCode: "401",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+      },
+      templates: {
+        "application/json": JSON.stringify({
+          message: "Unauthorized",
+          statusCode: 401,
+        }),
+      },
+    });
+
+    api.addGatewayResponse("Forbidden", {
+      type: ResponseType.ACCESS_DENIED,
+      statusCode: "403",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+      },
+      templates: {
+        "application/json": JSON.stringify({
+          message: "Forbidden",
+          statusCode: 403,
+        }),
+      },
     });
 
     // Add additional IAM policy for S3 presigned URL generation
