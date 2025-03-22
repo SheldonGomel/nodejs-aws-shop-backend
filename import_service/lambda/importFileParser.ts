@@ -41,7 +41,7 @@ export const handler: Handler<S3Event> = async (event) => {
             // Send each record to SQS
             sqs.sendMessage(
               {
-                QueueUrl: sqsUrl,
+                QueueUrl: sqsUrl!,
                 MessageBody: JSON.stringify(data),
               },
               (error, data) => {

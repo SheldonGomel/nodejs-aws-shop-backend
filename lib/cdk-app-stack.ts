@@ -5,9 +5,16 @@ import {
   Duration,
   RemovalPolicy,
 } from "aws-cdk-lib";
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, Function } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
-import { RestApi, LambdaIntegration, Cors } from "aws-cdk-lib/aws-apigateway";
+import {
+  RestApi,
+  LambdaIntegration,
+  Cors,
+  AuthorizationType,
+  TokenAuthorizer,
+  ResponseType,
+} from "aws-cdk-lib/aws-apigateway";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -261,12 +268,23 @@ export class ImportServiceStack extends Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
         allowMethods: Cors.ALL_METHODS,
-        allowHeaders: ["Content-Type"],
+        allowHeaders: ["Content-Type", "Authorization"],
       },
     });
 
     // Create API resource and method
     const importResource = api.root.addResource("import");
+
+    // Import basicAuthorizer by name
+    const authorizerLambda = Function.fromFunctionName(
+      this,
+      "AuthorizerLambda",
+      "authorizer-lambda"
+    );
+
+    const authorizer = new TokenAuthorizer(this, "ImportAuthorizer", {
+      handler: authorizerLambda,
+    });
 
     importResource.addMethod("GET", new LambdaIntegration(importProductsFile), {
       requestParameters: {
@@ -275,6 +293,37 @@ export class ImportServiceStack extends Stack {
       requestValidatorOptions: {
         validateRequestParameters: true,
       },
+      authorizer: authorizer,
+      authorizationType: AuthorizationType.CUSTOM,
+    });
+
+    // Add gateway responses for unauthorized and forbidden
+    api.addGatewayResponse("Unauthorized", {
+      type: ResponseType.UNAUTHORIZED,
+      statusCode: "401",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+      },
+      templates: {
+        "application/json": JSON.stringify({
+          message: "Unauthorized",
+          statusCode: 401,
+        }),
+      },
+    });
+
+    api.addGatewayResponse("Forbidden", {
+      type: ResponseType.ACCESS_DENIED,
+      statusCode: "403",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+      },
+      templates: {
+        "application/json": JSON.stringify({
+          message: "Forbidden",
+          statusCode: 403,
+        }),
+      },
     });
 
     // Add additional IAM policy for S3 presigned URL generation
@@ -282,6 +331,32 @@ export class ImportServiceStack extends Stack {
       new iam.PolicyStatement({
         actions: ["s3:PutObject"],
         resources: [`${bucket.bucketArn}/*`],
+      })
+    );
+  }
+}
+
+export class AuthServiceStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    // Create Lambda function for authorizer
+    const basicAuthorizer = new NodejsFunction(this, "AuthorizerLambda", {
+      entry: "authorization_service/lambda/basicAutorizer.ts",
+      functionName: "authorizer-lambda",
+      ...lambdaParams,
+      environment: {
+        SheldonGomel: process.env.SheldonGomel!,
+      },
+    });
+
+    // Add permissions to the Lambda function
+    basicAuthorizer.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        resources: [
+          `arn:aws:lambda:${this.region}:${this.account}:function:import-products-file`,
+        ],
       })
     );
   }
