@@ -5,9 +5,15 @@ import {
   Duration,
   RemovalPolicy,
 } from "aws-cdk-lib";
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, Function } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
-import { RestApi, LambdaIntegration, Cors } from "aws-cdk-lib/aws-apigateway";
+import {
+  RestApi,
+  LambdaIntegration,
+  Cors,
+  AuthorizationType,
+  TokenAuthorizer,
+} from "aws-cdk-lib/aws-apigateway";
 import { Construct } from "constructs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -268,6 +274,17 @@ export class ImportServiceStack extends Stack {
     // Create API resource and method
     const importResource = api.root.addResource("import");
 
+    // Import basicAuthorizer by name
+    const authorizerLambda = Function.fromFunctionName(
+      this,
+      "AuthorizerLambda",
+      "authorizer-lambda"
+    );
+
+    const authorizer = new TokenAuthorizer(this, "ImportAuthorizer", {
+      handler: authorizerLambda,
+    });
+
     importResource.addMethod("GET", new LambdaIntegration(importProductsFile), {
       requestParameters: {
         "method.request.querystring.name": true, // Make name parameter required
@@ -275,6 +292,8 @@ export class ImportServiceStack extends Stack {
       requestValidatorOptions: {
         validateRequestParameters: true,
       },
+      authorizer: authorizer,
+      authorizationType: AuthorizationType.CUSTOM,
     });
 
     // Add additional IAM policy for S3 presigned URL generation
@@ -292,7 +311,7 @@ export class AuthServiceStack extends Stack {
     super(scope, id, props);
 
     // Create Lambda function for authorizer
-    const authorizerLambda = new NodejsFunction(this, "AuthorizerLambda", {
+    const basicAuthorizer = new NodejsFunction(this, "AuthorizerLambda", {
       entry: "authorization_service/lambda/basicAutorizer.ts",
       functionName: "authorizer-lambda",
       ...lambdaParams,
@@ -302,10 +321,12 @@ export class AuthServiceStack extends Stack {
     });
 
     // Add permissions to the Lambda function
-    authorizerLambda.addToRolePolicy(
+    basicAuthorizer.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["lambda:InvokeFunction"],
-        resources: ["*"],
+        resources: [
+          `arn:aws:lambda:${this.region}:${this.account}:function:import-products-file`,
+        ],
       })
     );
   }
