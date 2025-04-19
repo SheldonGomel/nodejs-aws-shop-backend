@@ -25,6 +25,7 @@ build
 *.sw?
 
 *.js
+!bff_service/*.js
 !jest.config.js
 *.d.ts
 
