@@ -26,6 +26,19 @@ const requestHandler = async (request, reply) => {
     const authHeader = request.headers['authorization'] || '';
     const cacheKey = `${targetURL}|${authHeader}`; // Composite key: URL + Authorization header
 
+    
+    let headers = request.headers;
+    if (recipientURL.includes('https')) {
+      headers = {
+        'Content-Type': request.headers['content-type'],
+        'Accept': request.headers['accept'],
+        'Authorization': request.headers['authorization'],
+        'Access-Control-Allow-Origin': request.headers['origin'],
+      };
+    }
+    headers['Access-Control-Allow-Origin'] = request.headers['origin'];
+    headers['Access-Control-Allow-Headers'] = request.headers['access-control-request-headers'];
+    headers['Access-Control-Allow-Methods'] = request.headers['access-control-request-method'];
     // Check cache for GET requests to '/products'
     if (request.method === 'GET' && request.url === '/products') {
       console.log('cacheKey', cacheKey);
@@ -34,7 +47,7 @@ const requestHandler = async (request, reply) => {
         const { data, expiration } = cachedEntry;
         if (Date.now() < expiration) {
           console.log('Cache hit for', cacheKey);
-          return reply.send(data);
+          return reply.status(200).headers(headers).send(JSON.stringify(data));
         } else {
           console.log('Cache expired for', cacheKey);
           cache.delete(cacheKey); // Remove expired entry
@@ -43,16 +56,6 @@ const requestHandler = async (request, reply) => {
         console.log('Cache miss for', cacheKey);
       }
     }
-
-    let headers = request.headers;
-    if (recipientURL.includes('https')) {
-      headers = {
-        'Content-Type': request.headers['content-type'],
-        'Accept': request.headers['accept'],
-        'Authorization': request.headers['authorization'],
-      };
-    }
-
     const response = await axios({
       method: request.method,
       url: targetURL,
@@ -70,7 +73,7 @@ const requestHandler = async (request, reply) => {
       console.log('Response cached for', cacheKey);
     }
 
-    reply.status(response.status).headers(headers).send(response.data);
+    reply.status(response.status).headers(headers).send(JSON.stringify(response.data));
   } catch (err) {
     console.error('Error:', err);
     console.error('Error response:', err.response);
