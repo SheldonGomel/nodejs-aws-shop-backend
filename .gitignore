@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 .serverless
 .env
+.venv
 coverage
 dist
 build
@@ -25,6 +26,7 @@ build
 *.sw?
 
 *.js
+!bff_service/*.js
 !jest.config.js
 *.d.ts
 
@@ -33,3 +35,8 @@ build
 cdk.out
 
 
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

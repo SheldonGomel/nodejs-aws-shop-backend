@@ -97,6 +97,24 @@ export class MyLambdaProjectStack extends Stack {
     productsTable.grantReadWriteData(createProduct);
     stocksTable.grantReadWriteData(createProduct);
 
+    // Create Lambda function for updating a product
+    const updateProduct = new NodejsFunction(this, "UpdateProduct", {
+      entry: "product_service/lambda/updateProduct.ts",
+      functionName: "update-product",
+      ...productsOptions,
+    });
+    productsTable.grantReadWriteData(updateProduct);
+    stocksTable.grantReadWriteData(updateProduct);
+
+    // Create Lambda function for deleting a product by ID
+    const deleteProductById = new NodejsFunction(this, "DeleteProductById", {
+      entry: "product_service/lambda/deleteProductById.ts",
+      functionName: "delete-product-by-id",
+      ...productsOptions,
+    });
+    productsTable.grantReadWriteData(deleteProductById);
+    stocksTable.grantReadWriteData(deleteProductById);
+
     // Create Lambda function for catalog batch process
     const catalogBatchProcess = new NodejsFunction(
       this,
@@ -189,6 +207,12 @@ export class MyLambdaProjectStack extends Stack {
 
     // POST /products
     productsResource.addMethod("POST", new LambdaIntegration(createProduct));
+
+    // PUT /products
+    productsResource.addMethod("PUT", new LambdaIntegration(updateProduct));
+
+    // DELETE /products/{id}
+    productById.addMethod("DELETE", new LambdaIntegration(deleteProductById));
 
     // Output the API URL
     new CfnOutput(this, "ApiUrl", {

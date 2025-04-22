@@ -11,6 +11,13 @@ export type CreateProduct = {
   description: string;
   count: number;
 }
+export type UpdateProduct = {
+  id: string;
+  title: string;
+  price: number;
+  description: string;
+  count: number;
+}
 
 export type Stock = {
   product_id: string;
