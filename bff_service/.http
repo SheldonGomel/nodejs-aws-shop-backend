@@ -1,9 +1,14 @@
 GET http://localhost:3000/products
 Authorization: Basic SheldonGomel:TEST_PASSWORD
-Accept: application/json
+Content-Type: application/json
 
 ###
-GET http://localhost:3000/products/421c7cf8-619e-4c69-a469-9d3fb7bd8786
+GET http://localhost:3000
+Authorization: Basic SheldonGomel:TEST_PASSWORD
+Content-Type: application/json
+
+###
+GET http://localhost:3000/products/7717329a-e3e8-4786-aee0-6747617e6ba9
 Authorization: Basic SheldonGomel:TEST_PASSWORD
 Content-Type: application/json
 
@@ -25,34 +30,38 @@ Authorization: Basic SheldonGomel:TEST_PASSWORD
 Content-Type: application/json
 
 {
-  "id":"2900e060-ca78-4713-ac81-d42cacaf634c",
-  "count":6,
+  "id":"a63c3d46-49dc-452b-ad99-aad2dfbd3ca3",
+  "count":2,
   "price":22,
   "description":"updated",
   "title":"title updt"
 }
 
 ###
-DELETE http://localhost:3000/products/7555082c-df3c-4f9a-a5e2-7bdc0e26df5e
+DELETE http://localhost:3000/products/a63c3d46-49dc-452b-ad99-aad2dfbd3ca3
 Authorization: Basic SheldonGomel:TEST_PASSWORD
-Content-Type: application/json
 
 
 ###
 GET http://localhost:3000/cart
 Authorization: Basic SheldonGomel:TEST_PASSWORD
-Accept: application/json
+Content-Type: application/json
+
+###
+GET http://sheldongomel-cart-api-dev.eu-west-1.elasticbeanstalk.com/api/profile/cart
+Authorization: Basic SheldonGomel:TEST_PASSWORD
+Content-Type: application/json
 
 ###
 PUT http://localhost:3000/cart
 Authorization: Basic SheldonGomel:TEST_PASSWORD
 Content-Type: application/json
 
-{
-"product":
-  {"id":"f0a8c271-4cd7-447b-b0bc-4da7cca3fdb7",
-   "description":"Classic novel by F. Scott",
-   "price":"12.99","title":"The Great Alpaca"
-   },
-"count":33
-}
+{"product":{"id":"977ccff7-d876-4ecc-9d12-26d683e027d2","description":"Comprehensive book on AI and Alpaca","price":"4.99","title":"AI and Alpaca Learning"},"count":2}
+
+###
+PUT http://localhost:3000/order
+Authorization: Basic SheldonGomel:TEST_PASSWORD
+Content-Type: application/json
+
+{"items":[{"productId":"f0a8c271-4cd7-447b-b0bc-4da7cca3fdb7","count":29},{"productId":"1bafa26c-3a7b-49b8-8629-09c02328e302","count":31}],"address":{"comment":"asfd","address":"Lenin 25","lastName":"Vir","firstName":"Sancho"}}
