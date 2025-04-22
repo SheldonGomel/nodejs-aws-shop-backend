@@ -5,4 +5,4 @@ COPY bff_service/package.json .
 RUN npm install --production
 ENV APP_PORT=3000
 EXPOSE 3000
-CMD ["node","./proxy.js"]
+CMD ["node","./bff_service/server.js"]
